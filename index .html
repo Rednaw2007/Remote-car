@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ESP32 Speed & Direction Remote</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/paho-mqtt/1.0.1/mqttws31.min.js"></script>
+    <style>
+        body { font-family: Arial, sans-serif; text-align: center; background: #181818; color: #fff; margin-top: 40px; }
+        .grid { display: grid; grid-template-columns: 100px 100px 100px; gap: 10px; justify-content: center; margin-top: 20px; }
+        button { padding: 20px; font-size: 16px; font-weight: bold; cursor: pointer; border-radius: 8px; border: none; background: #007bff; color: white; }
+        button:active { background: #0056b3; }
+        .stop { background: #dc3545; }
+        .slider-container { margin-top: 30px; }
+        input[type=range] { width: 250px; }
+        .status { margin-bottom: 20px; font-weight: bold; }
+    </style>
+</head>
+<body>
+
+    <h2>ESP32 MQTT Car Remote</h2>
+    <div id="status" class="status">Status: Connecting...</div>
+
+    <div class="grid">
+        <div></div>
+        <button onclick="sendCommand('FORWARD')">▲ FORWARD</button>
+        <div></div>
+        <button onclick="sendCommand('LEFT')">◄ LEFT</button>
+        <button class="stop" onclick="sendCommand('STOP')">■ STOP</button>
+        <button onclick="sendCommand('RIGHT')">RIGHT ►</button>
+        <div></div>
+        <button onclick="sendCommand('BACKWARD')">▼ BACK</button>
+        <div></div>
+    </div>
+
+    <div class="slider-container">
+        <label for="speedRange">Speed Control: <span id="speedVal">200</span></label><br><br>
+        <input type="range" id="speedRange" min="0" max="255" value="200" oninput="updateSpeed(this.value)">
+    </div>
+
+    <script>
+        const controlTopic = "esp32/car/control";
+        const speedTopic = "esp32/car/speed";
+        const client = new Paho.MQTT.Client("broker.hivemq.com", 8000, "web_client_" + Math.random().toString(16).substr(2, 8));
+
+        client.onConnectionLost = onConnectionLost;
+        client.connect({ onSuccess: onConnect, onFailure: onFailure });
+
+        function onConnect() {
+            document.getElementById("status").innerText = "Status: Connected to MQTT Broker";
+            document.getElementById("status").style.color = "#28a745";
+        }
+
+        function onFailure() {
+            document.getElementById("status").innerText = "Status: Connection Failed";
+            document.getElementById("status").style.color = "#dc3545";
+        }
+
+        function onConnectionLost(responseObject) {
+            if (responseObject.errorCode !== 0) {
+                document.getElementById("status").innerText = "Status: Disconnected";
+                document.getElementById("status").style.color = "#dc3545";
+            }
+        }
+
+        function sendCommand(cmd) {
+            if (client.isConnected()) {
+                let message = new Paho.MQTT.Message(cmd);
+                message.destinationName = controlTopic;
+                client.send(message);
+            }
+        }
+
+        function updateSpeed(val) {
+            document.getElementById("speedVal").innerText = val;
+            if (client.isConnected()) {
+                let message = new Paho.MQTT.Message(val.toString());
+                message.destinationName = speedTopic;
+                client.send(message);
+            }
+        }
+    </script>
+</body>
+</html>

@@ -41,19 +41,32 @@
     <script>
         const controlTopic = "esp32/car/control";
         const speedTopic = "esp32/car/speed";
-        const client = new Paho.MQTT.Client("broker.hivemq.com", 8000, "web_client_" + Math.random().toString(16).substr(2, 8));
+
+        // Using Secure WebSockets (port 8884) for HTTPS compatibility on Vercel
+        const client = new Paho.MQTT.Client(
+            "broker.hivemq.com", 
+            8884, 
+            "web_client_" + Math.random().toString(16).substr(2, 8)
+        );
 
         client.onConnectionLost = onConnectionLost;
-        client.connect({ onSuccess: onConnect, onFailure: onFailure });
+        
+        // Enable SSL for secure connection
+        client.connect({ 
+            onSuccess: onConnect, 
+            onFailure: onFailure,
+            useSSL: true 
+        });
 
         function onConnect() {
             document.getElementById("status").innerText = "Status: Connected to MQTT Broker";
             document.getElementById("status").style.color = "#28a745";
         }
 
-        function onFailure() {
+        function onFailure(error) {
             document.getElementById("status").innerText = "Status: Connection Failed";
             document.getElementById("status").style.color = "#dc3545";
+            console.error("MQTT Connect Error: ", error);
         }
 
         function onConnectionLost(responseObject) {
